@@ -1,242 +1,417 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'dart:io';
-import 'result_screen.dart'; // อย่าลืมตรวจสอบว่าอิมพอร์ตหน้า ResultScreen ถูกต้องนะครับ
+import 'app_colors.dart';
+import 'result_screen.dart'; // นำเข้าไว้สำหรับเชื่อมไปหน้าผลลัพธ์เมื่อวิเคราะห์เสร็จ
 
 class AnalyzingScreen extends StatefulWidget {
-  final File? imageFile;       // รับไฟล์รูปภาพจริงมาจากหน้า Home
-  final VoidCallback onCancel; // ฟังก์ชันเวลากดปุ่มลบ (X)
-
-  const AnalyzingScreen({
-    Key? key, 
-    required this.imageFile, 
-    required this.onCancel,
-  }) : super(key: key);
+  const AnalyzingScreen({super.key});
 
   @override
   State<AnalyzingScreen> createState() => _AnalyzingScreenState();
 }
 
 class _AnalyzingScreenState extends State<AnalyzingScreen> {
-  
+  double _progress = 0.68; // ค่าเริ่มต้น 68% ตามดีไซน์
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
-    // จำลองเวลา 3 วินาทีในการวิเคราะห์ข้อมูล จากนั้นจะเด้งไปหน้าแสดงผลลัพธ์อัตโนมัติ
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ResultScreen(imageFile: widget.imageFile),
-          ),
-        );
-      }
+    _startSimulatedProgress();
+  }
+
+  // จำลองความคืบหน้าการวิเคราะห์ของ AI
+  void _startSimulatedProgress() {
+    _timer = Timer.periodic(const Duration(milliseconds: 150), (timer) {
+      setState(() {
+        if (_progress < 1.0) {
+          _progress += 0.01;
+        } else {
+          _timer?.cancel();
+          // เมื่อวิเคราะห์ครบ 100% ให้เปิดไปหน้าผลลัพธ์ (ResultScreen)
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ResultScreen()),
+          );
+        }
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xfff8f9fa),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: const BoxDecoration(
-              color: Color(0xff009688),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.spa, color: Colors.white, size: 16),
+      backgroundColor: const Color(0xFFF8F9F3),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // 1. Header (ปุ่มย้อนกลับ + หัวข้อ + ตัวเลขขั้นตอน)
+              const _HeaderSection(),
+              const SizedBox(height: 20),
+
+              // 2. การ์ดแสดงรูปภาพพร้อมเอฟเฟกต์เส้นแสงสแกน
+              const _ScanningImageCard(),
+              const SizedBox(height: 24),
+
+              // 3. วงกลมแสดงเปอร์เซ็นต์ความคืบหน้า
+              _ProgressCircle(progress: _progress),
+              const SizedBox(height: 20),
+
+              // 4. หัวข้อหลักและคำอธิบายสถานะ
+              const _StatusTextSection(),
+              const SizedBox(height: 24),
+
+              // 5. การ์ดสรุป 3 ขั้นตอนการวิเคราะห์
+              const _StepListCard(),
+              const SizedBox(height: 24),
+
+              // 6. ข้อความเตือนส่วนท้าย
+              const Text(
+                'โปรดเปิดหน้านี้ไว้ระหว่างการวิเคราะห์ ผลที่ได้เป็นเพียงการประเมินเบื้องต้นจากภาพ',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 7. ปุ่มยกเลิกการวิเคราะห์
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'ยกเลิกการวิเคราะห์',
+                  style: TextStyle(
+                    color: AppColors.primaryGreen,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
           ),
         ),
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'PhytoScan',
-              style: TextStyle(
-                color: Colors.black, 
-                fontWeight: FontWeight.bold, 
-                fontSize: 18,
+      ),
+    );
+  }
+}
+
+// ==========================================
+// Sub-Widgets ของหน้า AnalyzingScreen
+// ==========================================
+
+class _HeaderSection extends StatelessWidget {
+  const _HeaderSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.fieldBorder.withOpacity(0.5)),
+            ),
+            child: const Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.textDark),
+          ),
+        ),
+        const Text(
+          'กำลังวิเคราะห์',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textDark,
+          ),
+        ),
+        const Text(
+          '02 / 03',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScanningImageCard extends StatelessWidget {
+  const _ScanningImageCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // รูปภาพใบไม้
+          SizedBox(
+            width: double.infinity,
+            height: 180,
+            child: Image.network(
+              'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=800',
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // ป้ายชื่อพืชด้านบนซ้าย
+          Positioned(
+            top: 12,
+            left: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Text(
+                'กุหลาบ · ภาพตัวอย่าง',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textDark,
+                ),
               ),
             ),
-            Text(
-              'ระบบวินิจฉัยโรคพืชด้วย AI',
-              style: TextStyle(color: Colors.grey, fontSize: 10),
+          ),
+
+          // เส้นแสงสีขาวแนวนอนสำหรับเอฟเฟกต์การสแกน (Scanning Line)
+          Positioned(
+            top: 90,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 2,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.8),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu, color: Colors.black54),
-            onPressed: () {},
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.0),
-          child: Container(color: Colors.grey.withOpacity(0.2), height: 1.0),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-        child: Column(
-          children: [
-            // --- การ์ดบน: แสดงรูปพืชที่อัปโหลด ---
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24.0),
-              ),
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(20.0),
-                          child: widget.imageFile != null
-                              ? Image.file(
-                                  widget.imageFile!,
-                                  height: 220,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                )
-                              : Container(
-                                  height: 220,
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.image, size: 50),
-                                ),
-                        ),
-                        Positioned(
-                          top: 12,
-                          right: 12,
-                          child: GestureDetector(
-                            onTap: widget.onCancel,
-                            child: const CircleAvatar(
-                              radius: 16,
-                              backgroundColor: Color(0xffe91e63),
-                              child: Icon(Icons.close, size: 18, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    const Text(
-                      'Image uploaded successfully',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // --- การ์ดล่าง: แสดงสถานะการวิเคราะห์ด้วย AI ---
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24.0),
-              ),
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 24.0),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: const BoxDecoration(
-                        color: Color(0xffe8f7f5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.spa_outlined,
-                        size: 36,
-                        color: Color(0xff009688),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Analyzing with AI...',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xff00796b),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Please wait...',
-                      style: TextStyle(fontSize: 13, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // แถบความคืบหน้า (ปรับให้โหลดเต็มสวย ๆ ระหว่างรอเด้งหน้า)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildProgressBarSegment(isActive: true),
-                        const SizedBox(width: 6),
-                        _buildProgressBarSegment(isActive: true),
-                        const SizedBox(width: 6),
-                        _buildProgressBarSegment(isActive: true),
-                        const SizedBox(width: 6),
-                        _buildProgressBarSegment(isActive: true),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // รายการเช็กลิสต์สถานะ
-                    Column(
-                      children: [
-                        _buildStatusLine('✓ Upload', isDone: true),
-                        _buildStatusLine('✓ Process', isDone: true),
-                        _buildStatusLine('✓ Analyze', isDone: true),
-                        _buildStatusLine('Complete', isDone: true, isCurrent: true),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
+}
 
-  Widget _buildProgressBarSegment({required bool isActive}) {
+class _ProgressCircle extends StatelessWidget {
+  final double progress;
+
+  const _ProgressCircle({required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    final int percentage = (progress * 100).clamp(0, 100).toInt();
+
+    return SizedBox(
+      width: 140,
+      height: 140,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // วงกลมหลอดโหลด
+          SizedBox(
+            width: 130,
+            height: 130,
+            child: CircularProgressIndicator(
+              value: progress,
+              strokeWidth: 8,
+              backgroundColor: const Color(0xFFE5ECE0),
+              color: const Color(0xFF235A3A),
+              strokeCap: StrokeCap.round,
+            ),
+          ),
+          // ข้อความตัวเลขตรงกลาง
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '$percentage%',
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF235A3A),
+                ),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'กำลังวิเคราะห์',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusTextSection extends StatelessWidget {
+  const _StatusTextSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        Text(
+          'กำลังทำความรู้จักใบนี้',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textDark,
+          ),
+        ),
+        SizedBox(height: 8),
+        Text(
+          'AI กำลังสังเกตรอยโรคและลักษณะของใบ อีกสักครู่\nเราจะช่วยหาวิธีดูแลให้คุณ',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            color: AppColors.textSecondary,
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StepListCard extends StatelessWidget {
+  const _StepListCard();
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: 45,
-      height: 6,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xff009688) : const Color(0xffe0e0e0),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.fieldBorder.withOpacity(0.6)),
+      ),
+      child: const Column(
+        children: [
+          // ขั้นตอนที่ 1: เสร็จสิ้นแล้ว
+          _StepItem(
+            icon: Icons.check_rounded,
+            iconBgColor: Color(0xFFE2EED8),
+            iconColor: AppColors.primaryGreen,
+            title: 'เตรียมภาพเรียบร้อย',
+            subtitle: 'ปรับขนาดและตรวจสอบความคมชัด',
+            isCompleted: true,
+          ),
+          Divider(height: 24, color: Color(0xFFF0F0F0)),
+
+          // ขั้นตอนที่ 2: กำลังดำเนินการ
+          _StepItem(
+            icon: Icons.auto_awesome_rounded,
+            iconBgColor: Color(0xFF235A3A),
+            iconColor: Colors.white,
+            title: 'AI กำลังวิเคราะห์อาการ',
+            subtitle: 'เปรียบเทียบลักษณะรอยโรคบนใบ',
+            isCurrent: true,
+          ),
+          Divider(height: 24, color: Color(0xFFF0F0F0)),
+
+          // ขั้นตอนที่ 3: รอดำเนินการ
+          _StepItem(
+            icon: Icons.eco_outlined,
+            iconBgColor: Color(0xFFF3F3F3),
+            iconColor: Color(0xFFB0B0B0),
+            title: 'สรุปผลและคำแนะนำ',
+            subtitle: 'รอการวิเคราะห์เสร็จสมบูรณ์',
+            isPending: true,
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildStatusLine(String text, {required bool isDone, bool isCurrent = false}) {
-    Color textColor = Colors.grey;
-    if (isDone || isCurrent) {
-      textColor = const Color(0xff009688);
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-          color: textColor,
+class _StepItem extends StatelessWidget {
+  final IconData icon;
+  final Color iconBgColor;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final bool isCompleted;
+  final bool isCurrent;
+  final bool isPending;
+
+  const _StepItem({
+    required this.icon,
+    required this.iconBgColor,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    this.isCompleted = false,
+    this.isCurrent = false,
+    this.isPending = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: iconBgColor,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 20, color: iconColor),
         ),
-      ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: isPending ? AppColors.textSecondary : AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isPending ? AppColors.textSecondary.withOpacity(0.6) : AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
