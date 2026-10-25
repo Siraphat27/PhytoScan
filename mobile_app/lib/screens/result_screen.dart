@@ -1,497 +1,392 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
-import 'home_screen.dart';
-import 'scan_screen.dart';
+import 'dart:io';
 
-class ResultScreen extends StatelessWidget {
-  const ResultScreen({super.key});
+class ResultScreen extends StatefulWidget {
+  final File? imageFile;
+
+  const ResultScreen({Key? key, required this.imageFile}) : super(key: key);
+
+  @override
+  State<ResultScreen> createState() => _ResultScreenState();
+}
+
+class _ResultScreenState extends State<ResultScreen> {
+  String _selectedTab = 'Results';
+  
+  // 1. เพิ่ม Key สำหรับควบคุมการเปิด-ปิด Drawer (เมนูด้านข้าง)
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9F3),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Header (ปุ่มย้อนกลับ + หัวข้อ + ขั้นตอน 03/03)
-              const _HeaderSection(),
-              const SizedBox(height: 16),
-
-              // 2. รูปภาพผลการสแกน + รายละเอียดเวลาด้านล่าง
-              const _ImageSection(),
-              const SizedBox(height: 20),
-
-              // 3. ชื่อโรคและหมวดหมู่
-              const _DiagnosisTitleSection(),
-              const SizedBox(height: 16),
-
-              // 4. การ์ดระดับความมั่นใจของ AI (87%)
-              const _AiConfidenceCard(),
-              const SizedBox(height: 16),
-
-              // 5. คำอธิบายรอยโรคที่สังเกตพบ
-              const Text(
-                'พบจุดดำขอบไม่เรียบและใบเหลือง\nซึ่งอาจสอดคล้องกับโรคใบจุดดำของกุหลาบ',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
+      key: _scaffoldKey, // ผูก Key เข้ากับ Scaffold
+      backgroundColor: const Color(0xfff8f9fa),
+      
+      // 2. เพิ่มแถบเมนูด้านข้าง (Drawer) เพื่อเวลาสไลด์หรือกดปุ่มแล้วให้มันแสดงผล
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Color(0xff009688)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.spa, color: Colors.white, size: 40),
+                  SizedBox(height: 10),
+                  Text('PhytoScan Menu', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('ระบบวินิจฉัยโรคพืชด้วย AI', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
               ),
-              const SizedBox(height: 20),
-
-              // 6. การ์ดคำแนะนำ "เริ่มดูแลอย่างอ่อนโยน"
-              const _CareRecommendationsCard(),
-              const SizedBox(height: 20),
-
-              // 7. กล่องข้อความแจ้งเตือน / ข้อควรระวัง
-              const _DisclaimerNoticeCard(),
-              const SizedBox(height: 24),
-
-              // 8. ปุ่มดำเนินการส่วนท้าย (บันทึกผล / สแกนอีกครั้ง)
-              const _ActionButtonsSection(),
-              const SizedBox(height: 16),
-            ],
-          ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home_outlined, color: Color(0xff009688)),
+              title: const Text('หน้าหลัก'),
+              onTap: () {
+                Navigator.pop(context); // ปิดเมนู
+                Navigator.of(context).popUntil((route) => route.isFirst); // กลับหน้าแรก
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history_outlined, color: Color(0xff009688)),
+              title: const Text('ประวัติการสแกน'),
+              onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings_outlined, color: Color(0xff009688)),
+              title: const Text('ตั้งค่าระบบ'),
+              onTap: () => Navigator.pop(context),
+            ),
+          ],
         ),
       ),
-    );
-  }
-}
-
-// ==========================================
-// Sub-Widgets ของหน้า ResultScreen
-// ==========================================
-
-class _HeaderSection extends StatelessWidget {
-  const _HeaderSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        GestureDetector(
-          onTap: () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
-              (route) => false,
-            );
-          },
+      
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        automaticallyImplyLeading: false, // ปิดปุ่มย้อนกลับอัตโนมัติ เพื่อให้ Layout สวยงามตามเดิม
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
           child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white,
+            padding: const EdgeInsets.all(4),
+            decoration: const BoxDecoration(
+              color: Color(0xff009688),
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.fieldBorder.withOpacity(0.5)),
             ),
-            child: const Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.textDark),
+            child: const Icon(Icons.spa, color: Colors.white, size: 16),
           ),
         ),
-        const Text(
-          'ผลวิเคราะห์พืช',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textDark,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'PhytoScan',
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            Text(
+              'ระบบวินิจฉัยโรคพืชด้วย AI',
+              style: TextStyle(color: Colors.grey, fontSize: 10),
+            ),
+          ],
+        ),
+        actions: [
+          // 3. ปรับปรุงตรงนี้: เมื่อกดปุ่มแฮมเบอร์เกอร์ จะสั่งเปิด Drawer ด้านข้างทันที
+          IconButton(
+            icon: const Icon(Icons.menu, color: Colors.black54),
+            onPressed: () {
+              _scaffoldKey.currentState?.openDrawer(); // สั่งเปิดเมนูด้านข้างด้วย Key
+            },
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(color: Colors.grey.withOpacity(0.2), height: 1.0),
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_selectedTab == 'Results') ...[
+                    Card(
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xffe8f7f5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.spa_outlined, color: Color(0xff009688), size: 24),
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Text(
+                                    'โรคใบจุด (Leaf Spot)',
+                                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                                  ),
+                                ),
+                                const Icon(Icons.check_circle, color: Color(0xff009688), size: 20),
+                              ],
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.only(left: 44.0, top: 4),
+                              child: Text(
+                                'ตรวจพบอัตโนมัติ: สูง',
+                                style: TextStyle(color: Color(0xff009688), fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'โรคที่ทำให้เกิดจุดสีน้ำตาลหรือสีดำบนใบพืช ซึ่งอาจขยายและรวมกันเป็นแผลขนาดใหญ่ ส่งผลให้ใบเหลืองและร่วงหล่นได้ มักเกิดจากเชื้อราหลายชนิด',
+                              style: TextStyle(fontSize: 13, color: Colors.black54, height: 1.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildTabButton('Results'),
+                        _buildTabButton('Symptoms'),
+                        _buildTabButton('Care'),
+                        _buildTabButton('Protection'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Card(
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _selectedTab == 'Symptoms'
+                              ? _buildSymptomsLayout() 
+                              : _buildResultsLayout(),
+
+                          const SizedBox(height: 16),
+                          
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xffeef5ff),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xffd0e3ff)),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.info_outline, color: Color(0xff2f80ed), size: 20),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'หมายเหตุ',
+                                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xff2f80ed)),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _selectedTab == 'Symptoms'
+                                            ? 'ผลการวินิจฉัยนี้เป็นเพียงการประเมินเบื้องต้นเท่านั้น หากมีข้อสงสัยควรปรึกษาผู้เชี่ยวชาญด้านพืชศาสตร์'
+                                            : 'ผลการวินิจฉัยนี้เป็นเพียงการประเมินเบื้องต้นเท่านั้น หากมีข้อสงสัยควรปรึกษาผู้เชี่ยวชาญด้านพืชศาสตร์ หรือเกษตรกรที่มีประสบการณ์เพื่อยืนยันผลและให้คำปรึกษาเพิ่มเติม',
+                                        style: const TextStyle(fontSize: 12, color: Color(0xff2f80ed), height: 1.5),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+                icon: const Icon(Icons.refresh, color: Colors.white, size: 20),
+                label: const Text('Start New Diagnosis', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff009688),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsLayout() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Row(
+          children: [
+            Icon(Icons.info_outline, color: Color(0xff009688), size: 20),
+            SizedBox(width: 8),
+            Text('ผลการวินิจฉัย', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        const Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Confidence Level', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            Text('84%', style: TextStyle(fontSize: 12, color: Color(0xff009688), fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: const LinearProgressIndicator(
+            value: 0.84,
+            minHeight: 8,
+            backgroundColor: Color(0xffe0e0e0),
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xff009688)),
           ),
         ),
-        const Text(
-          '03 / 03',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
+        const SizedBox(height: 24),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: const Color(0xfff8f9fa), borderRadius: BorderRadius.circular(16)),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('สรุป', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+              SizedBox(height: 8),
+              Text(
+                'โรคที่ทำให้เกิดจุดสีน้ำตาลหรือสีดำบนใบพืช ซึ่งอาจขยายและรวมกันเป็นแผลขนาดใหญ่ ส่งผลให้ใบเหลืองและร่วงหล่นได้ มักเกิดจากเชื้อราหลายชนิด',
+                style: TextStyle(fontSize: 13, color: Colors.black54, height: 1.5),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
-}
 
-class _ImageSection extends StatelessWidget {
-  const _ImageSection();
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildSymptomsLayout() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Stack(
-            children: [
-              SizedBox(
-                width: double.infinity,
-                height: 220,
-                child: Image.network(
-                  'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=800',
-                  fit: BoxFit.cover,
-                ),
-              ),
-              Positioned(
-                top: 14,
-                left: 14,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.eco_outlined, size: 16, color: AppColors.primaryGreen),
-                      SizedBox(width: 6),
-                      Text(
-                        'กุหลาบ',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        const Row(
           children: [
-            const Text(
-              'วันนี้ · 09:41 น. • วิเคราะห์จาก 1 ภาพ',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.textSecondary,
-              ),
+            Icon(Icons.info_outline, color: Color(0xff009688), size: 20),
+            SizedBox(width: 8),
+            Text('อาการของโรค', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _buildSymptomItem('1', 'ใบมีจุดสีน้ำตาลหรือสีดำที่มีขอบชัดเจน'),
+        _buildSymptomItem('2', 'จุดอาจมีวงแหวนหลายวงรอบๆ'),
+        _buildSymptomItem('3', 'ใบเหลืองรอบบริเวณที่เป็นโรค'),
+        _buildSymptomItem('4', 'ใบเเห้งหล่นก่อนกำหนด'),
+        _buildSymptomItem('5', 'จุดอาจรวมตัวกันเป็นแผลใหญ่'),
+      ],
+    );
+  }
+
+  Widget _buildSymptomItem(String number, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xffe8f7f5).withOpacity(0.4),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 12,
+              backgroundColor: const Color(0xff009688),
+              child: Text(number, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF6EFE6),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'ผลตัวอย่าง',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF9E7748),
-                  fontWeight: FontWeight.w600,
-                ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w500),
               ),
             ),
           ],
         ),
-      ],
-    );
-  }
-}
-
-class _DiagnosisTitleSection extends StatelessWidget {
-  const _DiagnosisTitleSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'อาการที่มีแนวโน้มพบ',
-          style: TextStyle(
-            fontSize: 13,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        SizedBox(height: 4),
-        Text(
-          'สงสัยโรคใบจุดดำ',
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textDark,
-          ),
-        ),
-        SizedBox(height: 2),
-        Text(
-          'Black spot · Diplocarpon rosae',
-          style: TextStyle(
-            fontSize: 14,
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AiConfidenceCard extends StatelessWidget {
-  const _AiConfidenceCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF5E9),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          const Text(
-            '87%',
-            style: TextStyle(
-              fontSize: 34,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF235A3A),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'ความมั่นใจของ AI · ค่าตัวอย่าง',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF235A3A),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: const LinearProgressIndicator(
-                    value: 0.87,
-                    minHeight: 8,
-                    backgroundColor: Color(0xFFD6E3CE),
-                    color: Color(0xFF235A3A),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'ไม่ใช่ระดับความรุนแรงของโรค',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
-}
 
-class _CareRecommendationsCard extends StatelessWidget {
-  const _CareRecommendationsCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.fieldBorder.withOpacity(0.6)),
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.volunteer_activism_outlined, color: AppColors.primaryGreen, size: 22),
-              SizedBox(width: 8),
-              Text(
-                'เริ่มดูแลอย่างอ่อนโยน',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 16),
-          _CareItem(
-            icon: Icons.content_cut_rounded,
-            title: 'แยกต้นและตัดใบที่มีอาการ',
-            description: 'เก็บใบที่เป็นโรคออก ใส่ถุงทิ้ง ไม่ทำปุ๋ยหมัก และทำความสะอาดอุปกรณ์หลังใช้',
-          ),
-          SizedBox(height: 16),
-          _CareItem(
-            icon: Icons.water_drop_outlined,
-            title: 'ลดความชื้นบนใบ',
-            description: 'รดน้ำบริเวณโคนต้นในตอนเช้า จัดระยะต้นให้อากาศถ่ายเท และเลี่ยงน้ำกระเด็นใส่ใบ',
-          ),
-          SizedBox(height: 16),
-          _CareItem(
-            icon: Icons.calendar_today_rounded,
-            title: 'ติดตามอาการใน 3–5 วัน',
-            description: 'ถ่ายภาพซ้ำเพื่อเปรียบเทียบ หากอาการลามเร็ว ให้ปรึกษานักวิชาการเกษตรก่อนใช้สารใด ๆ',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CareItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
-
-  const _CareItem({
-    required this.icon,
-    required this.title,
-    required this.description,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
+  Widget _buildTabButton(String tabName) {
+    bool isSelected = _selectedTab == tabName;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedTab = tabName;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFFEFF5E9),
-            borderRadius: BorderRadius.circular(14),
+            color: isSelected ? const Color(0xff009688) : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: isSelected ? const Color(0xff009688) : Colors.grey.withOpacity(0.3)),
           ),
-          child: Icon(icon, color: AppColors.primaryGreen, size: 20),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DisclaimerNoticeCard extends StatelessWidget {
-  const _DisclaimerNoticeCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9F3EA),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline_rounded, color: Color(0xFF9E7748), size: 20),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'นี่คือผลตัวอย่างและการประเมินเบื้องต้นจากภาพ ไม่ใช่การยืนยันโรค ควรให้ผู้เชี่ยวชาญตรวจสอบ ก่อนตัดสินใจรักษาหรือใช้ผลิตภัณฑ์กำจัดโรคพืช',
-              style: TextStyle(
-                fontSize: 12,
-                color: Color(0xFF8C683B),
-                height: 1.45,
-              ),
+          child: Text(
+            tabName,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.black54,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontSize: 13,
             ),
           ),
-        ],
+        ),
       ),
     );
   }
-}
 
-class _ActionButtonsSection extends StatelessWidget {
-  const _ActionButtonsSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(
-          width: double.infinity,
-          height: 54,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const HomeScreen()),
-                (route) => false,
-              );
-            },
-            icon: const Icon(Icons.bookmark_outline_rounded, color: Colors.white, size: 20),
-            label: const Text(
-              'บันทึกผลไว้ติดตาม',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF235A3A),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Center(
-          child: TextButton(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const ScanScreen()),
-              );
-            },
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'สแกนพืชอีกครั้ง ',
-                  style: TextStyle(
-                    color: AppColors.primaryGreen,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-                Icon(Icons.arrow_forward_rounded, size: 16, color: AppColors.primaryGreen),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  String _percentage(double confidence) => '${(confidence * 100).round()}%';
 }
